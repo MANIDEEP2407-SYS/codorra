@@ -1,7 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Copy, Check, AlertTriangle, Shield, Activity } from 'lucide-react';
 import ECGHeartbeat from '../components/ECGHeartbeat';
 import RelayStatus from '../components/RelayStatus';
 import CountdownTimer from '../components/CountdownTimer';
@@ -22,52 +20,39 @@ export default function Dashboard() {
 
   const [copied, setCopied] = useState(false);
   const [flatline, setFlatline] = useState(false);
-  const [showCinematic, setShowCinematic] = useState(false);
-  const [heartbeatAnim, setHeartbeatAnim] = useState(false);
+  const [showRelease, setShowRelease] = useState(false);
+  const [heartbeatSent, setHeartbeatSent] = useState(false);
   const [silent, setSilent] = useState(false);
 
-  // Redirect if no vault
-  useEffect(() => {
-    if (!vaultId) nav('/');
-  }, [vaultId, nav]);
+  useEffect(() => { if (!vaultId) nav('/'); }, [vaultId, nav]);
 
-  // Countdown tick
+  // countdown tick
   useEffect(() => {
     if (silent || released) return;
-    const id = setInterval(() => {
-      tickCountdown();
-    }, 1000);
+    const id = setInterval(tickCountdown, 1000);
     return () => clearInterval(id);
   }, [silent, released, tickCountdown]);
 
-  // When secondsRemaining hits 0 and we're in silent mode, increment missed
   useEffect(() => {
-    if (secondsRemaining === 0 && silent && !released) {
-      incrementMissed();
-    }
+    if (secondsRemaining === 0 && silent && !released) incrementMissed();
   }, [secondsRemaining, silent, released, incrementMissed]);
 
-  // Ambient threat CSS
+  // change accent based on threat level
   useEffect(() => {
-    const colors = { safe: '#00f5ff', warning: '#f59e0b', critical: '#ff2d55' };
-    document.documentElement.style.setProperty('--primary', colors[threatLevel]);
     document.body.classList.toggle('critical-pulse', threatLevel === 'critical');
     return () => document.body.classList.remove('critical-pulse');
   }, [threatLevel]);
 
-  // Poll audit logs
+  // poll audit logs
   useEffect(() => {
     if (!vaultId) return;
-    const fetch = async () => {
+    const fetch_ = async () => {
       const all = await Promise.allSettled([0, 1, 2].map(i => getAuditLog(i, vaultId)));
-      const merged = all
-        .filter(r => r.status === 'fulfilled')
-        .flatMap(r => r.value)
-        .sort((a, b) => b.ts - a.ts);
+      const merged = all.filter(r => r.status === 'fulfilled').flatMap(r => r.value).sort((a, b) => b.ts - a.ts);
       appendAuditLog(merged);
     };
-    fetch();
-    const id = setInterval(fetch, 15000);
+    fetch_();
+    const id = setInterval(fetch_, 15000);
     return () => clearInterval(id);
   }, [vaultId, appendAuditLog]);
 
@@ -78,11 +63,9 @@ export default function Dashboard() {
       const sig = await signHeartbeat(depositorKeypair.privateKey, vaultId, ts);
       await sendHeartbeat(vaultId, ts, sig);
       storeHeartbeat();
-      setHeartbeatAnim(true);
-      setTimeout(() => setHeartbeatAnim(false), 1200);
-    } catch (e) {
-      console.error('Heartbeat failed:', e);
-    }
+      setHeartbeatSent(true);
+      setTimeout(() => setHeartbeatSent(false), 1500);
+    } catch (e) { console.error('Heartbeat failed:', e); }
   }, [vaultId, depositorKeypair, storeHeartbeat]);
 
   const handleGoSilent = () => {
@@ -91,9 +74,9 @@ export default function Dashboard() {
     setThreatLevel('critical');
   };
 
-  const handleTriggerRelease = async () => {
+  const handleRelease = async () => {
     if (!vaultId) return;
-    setShowCinematic(true);
+    setShowRelease(true);
     try {
       const result = await triggerConsensus(0, vaultId);
       storeRelease(result?.etherealUrl || null);
@@ -109,113 +92,86 @@ export default function Dashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const statusColor = { safe: '#22c55e', warning: '#f59e0b', critical: '#ff2d55' }[threatLevel];
+  const statusColor = { safe: '#5cb85c', warning: '#e8a040', critical: '#e85050' }[threatLevel];
   const statusLabel = { safe: 'Active', warning: 'Warning', critical: 'Critical' }[threatLevel];
 
-  const fmt = s => {
-    const d = new Date(s);
-    return d.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-  };
+  const fmt = s => new Date(s).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', zIndex: 1, padding: '0 0 60px' }}>
-      {/* Top bar */}
+    <div style={{ minHeight: '100vh', position: 'relative', zIndex: 1, paddingBottom: 40 }}>
+      {/* top bar */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-        padding: '14px 32px', display: 'flex', alignItems: 'center', gap: 16,
+        position: 'sticky', top: 0, zIndex: 100, background: '#0d0d0dee',
+        backdropFilter: 'blur(8px)', borderBottom: '1px solid #1e1e1e',
+        padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12,
       }}>
-        <span style={{ fontFamily: "'Syne',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--primary, #00f5ff)', letterSpacing: 1 }}>
-          TRUTHSWITCH
+        <span style={{ fontSize: 16, fontWeight: 700, color: '#eee', letterSpacing: 0.5 }}>
+          SatyaRaksha
         </span>
         <div style={{ flex: 1 }} />
         {vaultId && (
-          <button
-            onClick={copyVaultId}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '6px 14px', cursor: 'pointer', color: '#a3a3a3',
-            }}
-          >
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12 }}>{vaultId}</span>
-            {copied ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
+          <button onClick={copyVaultId} style={{
+            display: 'flex', alignItems: 'center', gap: 6, background: '#1a1a1a',
+            border: '1px solid #2a2a2a', borderRadius: 6, padding: '5px 12px',
+            cursor: 'pointer', color: '#888', fontSize: 12, fontFamily: 'monospace',
+          }}>
+            {vaultId} {copied ? '✓' : '📋'}
           </button>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%', background: statusColor, display: 'inline-block',
-            animation: 'dotPulse 2s ease-in-out infinite', boxShadow: `0 0 6px ${statusColor}`,
-          }} />
-          <span style={{ fontSize: 12, color: statusColor, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>
-            {statusColor === '#ff2d55' ? '⚠ ' : '● '}{statusLabel}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, display: 'inline-block', animation: 'pulse-dot 2s infinite' }} />
+          <span style={{ fontSize: 12, color: statusColor, fontWeight: 600 }}>{statusLabel}</span>
         </div>
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {/* ECG Heartbeat Section */}
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* heartbeat section */}
         <section style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Activity size={16} color="var(--primary, #00f5ff)" />
-              <span style={sectionTitle}>Depositor Heartbeat</span>
-            </div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h2 style={sectionTitle}>Depositor Heartbeat</h2>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <CountdownTimer />
-              <button
-                onClick={handleHeartbeat}
-                disabled={silent}
-                style={{
-                  background: heartbeatAnim ? 'rgba(34,197,94,0.15)' : 'rgba(0,245,255,0.06)',
-                  border: `1px solid ${heartbeatAnim ? '#22c55e' : 'var(--primary, #00f5ff)'}`,
-                  color: heartbeatAnim ? '#22c55e' : 'var(--primary, #00f5ff)',
-                  borderRadius: 8, padding: '10px 20px', cursor: silent ? 'not-allowed' : 'pointer',
-                  fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600,
-                  transition: 'all 0.3s', opacity: silent ? 0.4 : 1,
-                  boxShadow: heartbeatAnim ? '0 0 20px rgba(34,197,94,0.3)' : 'none',
-                }}
-              >
-                {heartbeatAnim ? '✓ Heartbeat Sent' : 'Send Heartbeat Now'}
+              <button onClick={handleHeartbeat} disabled={silent} style={{
+                background: heartbeatSent ? '#1a3a1a' : '#4a9eff',
+                border: 'none', color: heartbeatSent ? '#5cb85c' : '#fff',
+                borderRadius: 6, padding: '8px 18px', cursor: silent ? 'not-allowed' : 'pointer',
+                fontSize: 13, fontWeight: 600, opacity: silent ? 0.4 : 1,
+              }}>
+                {heartbeatSent ? '✓ Sent' : 'Send Heartbeat'}
               </button>
             </div>
           </div>
           <ECGHeartbeat flatline={flatline} />
           {flatline && (
-            <div style={{ textAlign: 'center', color: '#ff2d55', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, marginTop: 12, animation: 'dotPulse 1.5s ease-in-out infinite' }}>
+            <div style={{ textAlign: 'center', color: '#e85050', fontFamily: 'monospace', fontSize: 12, marginTop: 10 }}>
               FLATLINE — SILENCE DETECTED
             </div>
           )}
         </section>
 
-        {/* Relay Nodes */}
+        {/* relay nodes */}
         <section style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <Shield size={16} color="var(--primary, #00f5ff)" />
-            <span style={sectionTitle}>Relay Nodes</span>
-          </div>
+          <h2 style={{ ...sectionTitle, marginBottom: 12 }}>Relay Nodes</h2>
           <RelayStatus />
         </section>
 
-        {/* Evidence Summary */}
+        {/* evidence info */}
         {evidence && (
           <section style={cardStyle}>
-            <span style={{ ...sectionTitle, display: 'block', marginBottom: 16 }}>Evidence Summary</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <MetaRow label="File" value={`${evidence.fileName} (${(evidence.fileSize / 1024).toFixed(1)} KB)`} />
-              <MetaRow label="Algorithm" value="AES-256-GCM + Shamir(2,3) + ECDSA" />
-              <MetaRow label="SHA-256" value={evidence.hash} mono copyable />
-              <MetaRow label="HMAC-SHA256" value="verified ✓" green />
-              <MetaRow label="Deposited" value={fmt(Date.now())} />
-              <MetaRow label="Grace Period" value={`${gracePeriod} missed heartbeats`} />
+            <h2 style={{ ...sectionTitle, marginBottom: 12 }}>Evidence Summary</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <InfoRow label="File" value={`${evidence.fileName} (${(evidence.fileSize / 1024).toFixed(1)} KB)`} />
+              <InfoRow label="Algorithm" value="AES-256-GCM + Shamir(2,3) + ECDSA" />
+              <InfoRow label="SHA-256" value={evidence.hash} mono />
+              <InfoRow label="Grace Period" value={`${gracePeriod} missed heartbeats`} />
             </div>
             {evidence.recipients?.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 11, color: '#a3a3a3', marginBottom: 8, fontFamily: "'DM Sans',sans-serif" }}>Recipients</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>Recipients</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {evidence.recipients.map(r => (
-                    <span key={r} style={{ fontSize: 12, padding: '3px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', color: '#a3a3a3', fontFamily: "'DM Sans',sans-serif" }}>{r}</span>
+                    <span key={r} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 4, background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#888' }}>{r}</span>
                   ))}
                 </div>
               </div>
@@ -223,110 +179,72 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* Audit Log */}
+        {/* audit log */}
         <section style={cardStyle}>
-          <span style={{ ...sectionTitle, display: 'block', marginBottom: 12 }}>Audit Log</span>
+          <h2 style={{ ...sectionTitle, marginBottom: 10 }}>Audit Log</h2>
           <div style={{
-            background: '#080808', borderRadius: 8, padding: '14px 16px',
-            maxHeight: 240, overflowY: 'auto', fontFamily: "'JetBrains Mono',monospace", fontSize: 11,
+            background: '#0a0a0a', borderRadius: 6, padding: '12px 14px',
+            maxHeight: 200, overflowY: 'auto', fontFamily: 'monospace', fontSize: 11,
           }}>
             {auditLog.length === 0 ? (
-              <span style={{ color: '#333' }}>// No events yet — connect to relay nodes</span>
+              <span style={{ color: '#333' }}>// no events yet</span>
             ) : auditLog.map((entry, i) => (
-              <div key={i} style={{ color: logColor(entry.event), marginBottom: 3, lineHeight: 1.6 }}>
+              <div key={i} style={{ marginBottom: 2, lineHeight: 1.6 }}>
                 <span style={{ color: '#555' }}>[{fmt(entry.ts)}]</span>{' '}
-                <span style={{ color: '#00f5ff' }}>{entry.event}</span>{' '}
-                <span style={{ color: '#a3a3a3' }}>{entry.detail}</span>
+                <span style={{ color: logColor(entry.event) }}>{entry.event}</span>{' '}
+                <span style={{ color: '#777' }}>{entry.detail}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Danger Zone */}
-        <section style={{ ...cardStyle, borderColor: 'rgba(255,45,85,0.2)', background: 'rgba(255,45,85,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <AlertTriangle size={16} color="#ff2d55" />
-            <span style={{ ...sectionTitle, color: '#ff2d55' }}>Danger Zone</span>
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <DangerBtn
-              label="Simulate Going Silent"
-              sub="Flatlines ECG — begins release countdown"
-              onClick={handleGoSilent}
-              disabled={silent}
-            />
-            <DangerBtn
-              label="Trigger Immediate Release"
-              sub="Skip countdown — initiate consensus now"
-              onClick={handleTriggerRelease}
-              hot
-            />
+        {/* danger zone */}
+        <section style={{ ...cardStyle, borderColor: '#3a2020' }}>
+          <h2 style={{ ...sectionTitle, color: '#e85050', marginBottom: 12 }}>⚠ Danger Zone</h2>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button onClick={handleGoSilent} disabled={silent} style={{
+              background: '#1a1515', border: '1px solid #3a2020', borderRadius: 6,
+              padding: '10px 18px', cursor: silent ? 'not-allowed' : 'pointer',
+              opacity: silent ? 0.4 : 1, textAlign: 'left',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#e85050', marginBottom: 2 }}>Simulate Going Silent</div>
+              <div style={{ fontSize: 11, color: '#888' }}>Flatlines ECG, begins release countdown</div>
+            </button>
+            <button onClick={handleRelease} style={{
+              background: '#2a1515', border: '1px solid #4a2020', borderRadius: 6,
+              padding: '10px 18px', cursor: 'pointer', textAlign: 'left',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#e85050', marginBottom: 2 }}>Trigger Immediate Release</div>
+              <div style={{ fontSize: 11, color: '#888' }}>Skip countdown, initiate consensus now</div>
+            </button>
           </div>
         </section>
       </div>
 
-      <AnimatePresence>
-        {showCinematic && (
-          <CinematicRelease onClose={() => setShowCinematic(false)} />
-        )}
-      </AnimatePresence>
+      {showRelease && <CinematicRelease onClose={() => setShowRelease(false)} />}
     </div>
   );
 }
 
-function MetaRow({ label, value, mono, copyable, green }) {
-  const [copied, setCopied] = useState(false);
+function InfoRow({ label, value, mono }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: '#555', marginBottom: 3, fontFamily: "'DM Sans',sans-serif" }}>{label}</div>
-      <div style={{
-        fontSize: mono ? 10 : 12, color: green ? '#22c55e' : '#e5e5e5',
-        fontFamily: mono ? "'JetBrains Mono',monospace" : "'DM Sans',sans-serif",
-        wordBreak: 'break-all', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <span>{value}</span>
-        {copyable && (
-          <button onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, flexShrink: 0 }}>
-            {copied ? <Check size={11} color="#22c55e" /> : <Copy size={11} />}
-          </button>
-        )}
-      </div>
+      <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: mono ? 10 : 12, color: '#ccc', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value}</div>
     </div>
-  );
-}
-
-function DangerBtn({ label, sub, onClick, disabled, hot }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        background: hot ? 'rgba(255,45,85,0.08)' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${hot ? 'rgba(255,45,85,0.5)' : 'rgba(255,45,85,0.2)'}`,
-        borderRadius: 10, padding: '14px 20px', cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'left', opacity: disabled ? 0.4 : 1, transition: 'all 0.2s',
-      }}
-      onMouseEnter={e => !disabled && (e.currentTarget.style.background = hot ? 'rgba(255,45,85,0.14)' : 'rgba(255,45,85,0.06)')}
-      onMouseLeave={e => !disabled && (e.currentTarget.style.background = hot ? 'rgba(255,45,85,0.08)' : 'rgba(255,255,255,0.02)')}
-    >
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#ff2d55', fontFamily: "'DM Sans',sans-serif", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 11, color: '#a3a3a3', fontFamily: "'DM Sans',sans-serif" }}>{sub}</div>
-    </button>
   );
 }
 
 function logColor(event) {
-  if (event?.includes('FAIL') || event?.includes('REJECT') || event?.includes('MISSED')) return '#ff2d55';
-  if (event?.includes('OK') || event?.includes('STORED') || event?.includes('RELEASED')) return '#22c55e';
-  if (event?.includes('CONSENSUS') || event?.includes('TRIGGER')) return '#f59e0b';
-  return '#a3a3a3';
+  if (event?.includes('FAIL') || event?.includes('REJECT') || event?.includes('MISSED')) return '#e85050';
+  if (event?.includes('OK') || event?.includes('STORED') || event?.includes('RELEASED')) return '#5cb85c';
+  if (event?.includes('CONSENSUS') || event?.includes('TRIGGER')) return '#e8a040';
+  return '#888';
 }
 
 const cardStyle = {
-  background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.08)',
-  borderRadius: 12, padding: '20px 22px',
+  background: '#141414', border: '1px solid #1e1e1e', borderRadius: 8, padding: '16px 18px',
 };
 const sectionTitle = {
-  fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 700, color: '#e5e5e5',
+  fontSize: 14, fontWeight: 600, color: '#ddd',
 };

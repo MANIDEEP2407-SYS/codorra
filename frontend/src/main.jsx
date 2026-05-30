@@ -5,9 +5,11 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 
-// Make Buffer globally available for crypto-browserify (needed by secrets.js-grempe)
+// secrets.js-grempe needs Buffer to be available globally
+// this was annoying to figure out lol
 globalThis.Buffer = Buffer;
 
+// mount the app
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

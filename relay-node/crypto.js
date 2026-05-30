@@ -1,7 +1,10 @@
-// Node.js Web Crypto API wrappers (same logic as frontend/src/lib/crypto.js)
+// same crypto logic as frontend but using node webcrypto
+// keeps things consistent across client and relay nodes
 const { webcrypto } = require('crypto');
 const { subtle } = webcrypto;
 
+// verify the ECDSA signature on a heartbeat ping
+// if this fails the heartbeat gets rejected (prevents spoofing)
 async function verifyHeartbeat(publicKeyB64, vaultId, timestamp, signatureB64) {
   try {
     const publicKeyBytes = Buffer.from(publicKeyB64, 'base64');
@@ -10,6 +13,7 @@ async function verifyHeartbeat(publicKeyB64, vaultId, timestamp, signatureB64) {
       { name: 'ECDSA', namedCurve: 'P-256' },
       false, ['verify']
     );
+    // payload is just "vaultId:timestamp" - simple but effective
     const data = new TextEncoder().encode(`${vaultId}:${timestamp}`);
     const signature = Buffer.from(signatureB64, 'base64');
     return await subtle.verify(
@@ -22,6 +26,7 @@ async function verifyHeartbeat(publicKeyB64, vaultId, timestamp, signatureB64) {
   }
 }
 
+// AES-GCM decrypt - used during vault release to recover the evidence file
 async function decryptEvidence(keyHex, ivHex, ciphertextB64) {
   const keyBytes = Buffer.from(keyHex, 'hex');
   const iv = Buffer.from(ivHex, 'hex');
@@ -34,6 +39,7 @@ async function decryptEvidence(keyHex, ivHex, ciphertextB64) {
   return Buffer.from(plaintext);
 }
 
+// quick sha256 helper for integrity checks
 async function sha256hex(buffer) {
   const hashBuffer = await subtle.digest('SHA-256', buffer);
   return Buffer.from(hashBuffer).toString('hex');

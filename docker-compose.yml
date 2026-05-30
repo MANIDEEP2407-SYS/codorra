@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  relay-node-a:
+    build:
+      context: ./relay-node
+    container_name: satyaraksha-relay-a
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ID=A
+      - PORT=3001
+      - PEER_URLS=["http://relay-node-b:3002","http://relay-node-c:3003"]
+    volumes:
+      - data-a:/app
+    restart: unless-stopped
+
+  relay-node-b:
+    build:
+      context: ./relay-node
+    container_name: satyaraksha-relay-b
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ID=B
+      - PORT=3002
+      - PEER_URLS=["http://relay-node-a:3001","http://relay-node-c:3003"]
+    volumes:
+      - data-b:/app
+    restart: unless-stopped
+
+  relay-node-c:
+    build:
+      context: ./relay-node
+    container_name: satyaraksha-relay-c
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ID=C
+      - PORT=3003
+      - PEER_URLS=["http://relay-node-a:3001","http://relay-node-b:3002"]
+    volumes:
+      - data-c:/app
+    restart: unless-stopped
+
+volumes:
+  data-a:
+  data-b:
+  data-c:

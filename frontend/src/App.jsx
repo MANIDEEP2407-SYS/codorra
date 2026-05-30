@@ -4,6 +4,8 @@ import Landing from './pages/Landing';
 import Deposit from './pages/Deposit';
 import Dashboard from './pages/Dashboard';
 
+// main app layout - ghostlayer sits behind everything
+// and routes handle the 3 pages
 export default function App() {
   return (
     <>

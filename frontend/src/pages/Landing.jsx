@@ -1,20 +1,11 @@
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ShieldX, Smartphone, Mail, Globe, HardDrive } from 'lucide-react';
 
-const stagger = {
-  container: { animate: { transition: { staggerChildren: 0.15 } } },
-  item: {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
-  },
-};
-
+// icons for the "why other tools fail" cards
 const FAILS = [
-  { icon: Smartphone, tool: 'Signal', reason: 'Seized with your phone' },
-  { icon: Mail,       tool: 'ProtonMail', reason: 'Requires you to press send' },
-  { icon: Globe,      tool: 'Tor',      reason: 'Doesn\'t help when you\'re arrested' },
-  { icon: HardDrive,  tool: 'USB drives', reason: 'Confiscated on detention' },
+  { tool: 'Signal', reason: 'Gets seized with the phone' },
+  { tool: 'ProtonMail', reason: 'You have to press send yourself' },
+  { tool: 'Tor', reason: 'Useless when physically arrested' },
+  { tool: 'USB drives', reason: 'First thing confiscated' },
 ];
 
 export default function Landing() {
@@ -24,125 +15,90 @@ export default function Landing() {
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      padding: '60px 24px', position: 'relative', zIndex: 1,
+      padding: '80px 20px', position: 'relative', zIndex: 1,
     }}>
-      <motion.div
-        variants={stagger.container}
-        initial="initial"
-        animate="animate"
-        style={{ maxWidth: 680, textAlign: 'center' }}
-      >
-        {/* Story badge */}
-        <motion.div variants={stagger.item}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(255,45,85,0.08)', border: '0.5px solid rgba(255,45,85,0.3)',
-            borderRadius: 999, padding: '8px 18px', marginBottom: 36,
-          }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff2d55', display: 'inline-block' }} />
-            <span style={{ fontSize: 12, color: '#ff2d55', fontFamily: "'DM Sans', sans-serif" }}>
-              In 2022, a journalist was detained. Her USB drive was seized. Her story died.
-            </span>
-          </div>
-        </motion.div>
+      <div style={{ maxWidth: 620, textAlign: 'center' }}>
 
-        {/* H1 */}
-        <motion.div variants={stagger.item}>
-          <h1 style={{
-            fontFamily: "'Syne', sans-serif", fontSize: 'clamp(40px, 7vw, 68px)',
-            fontWeight: 800, lineHeight: 1.08, margin: '0 0 24px',
-            color: '#e5e5e5', letterSpacing: '-1px',
-          }}>
-            If they silence you,<br />
-            <span style={{ color: '#00f5ff' }}>the truth still speaks.</span>
-          </h1>
-        </motion.div>
+        {/* badge */}
+        <div style={{
+          display: 'inline-block', fontSize: 12, color: '#e87040',
+          border: '1px solid #e8704033', borderRadius: 20,
+          padding: '5px 14px', marginBottom: 28, background: '#e8704010',
+        }}>
+          सत्यमेव जयते — Truth alone triumphs
+        </div>
 
-        {/* Body */}
-        <motion.div variants={stagger.item}>
-          <p style={{
-            fontSize: 16, color: '#a3a3a3', lineHeight: 1.75,
-            maxWidth: 560, margin: '0 auto 36px', fontFamily: "'DM Sans', sans-serif",
-          }}>
-            A cryptographic dead man's switch. Encrypt evidence across 3 independent relay nodes.
-            If your heartbeat stops — the truth releases automatically.{' '}
-            <strong style={{ color: '#e5e5e5' }}>No central server. No single point of failure. No action required after setup.</strong>
-          </p>
-        </motion.div>
+        {/* main heading */}
+        <h1 style={{
+          fontSize: 'clamp(32px, 6vw, 56px)', fontWeight: 700,
+          lineHeight: 1.15, marginBottom: 20, color: '#eee',
+          letterSpacing: '-0.5px',
+        }}>
+          If they silence you,<br />
+          <span style={{ color: '#4a9eff' }}>the truth still speaks.</span>
+        </h1>
 
-        {/* CTAs */}
-        <motion.div variants={stagger.item} style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 56, flexWrap: 'wrap' }}>
+        {/* description */}
+        <p style={{
+          fontSize: 15, color: '#888', lineHeight: 1.7,
+          maxWidth: 500, margin: '0 auto 32px',
+        }}>
+          SatyaRaksha is a cryptographic dead man's switch. Your evidence is encrypted
+          and split across 3 independent nodes. If your heartbeat stops, the truth
+          releases automatically. No central server. No single point of failure.
+        </p>
+
+        {/* cta buttons */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 48, flexWrap: 'wrap' }}>
           <button
             onClick={() => nav('/deposit')}
             style={{
-              background: 'rgba(0,245,255,0.06)', border: '1px solid #00f5ff',
-              color: '#00f5ff', borderRadius: 10, padding: '14px 32px',
-              cursor: 'pointer', fontSize: 15, fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 600, letterSpacing: 0.3,
-              transition: 'all 0.2s',
+              background: '#4a9eff', border: 'none', color: '#fff',
+              borderRadius: 8, padding: '12px 28px', cursor: 'pointer',
+              fontSize: 14, fontWeight: 600,
             }}
-            onMouseEnter={e => e.target.style.background = 'rgba(0,245,255,0.14)'}
-            onMouseLeave={e => e.target.style.background = 'rgba(0,245,255,0.06)'}
           >
             Deposit Evidence →
           </button>
           <button
             onClick={() => nav('/dashboard')}
             style={{
-              background: 'none', border: '1px solid rgba(255,255,255,0.12)',
-              color: '#a3a3a3', borderRadius: 10, padding: '14px 32px',
-              cursor: 'pointer', fontSize: 15, fontFamily: "'DM Sans', sans-serif",
-              transition: 'all 0.2s',
+              background: 'transparent', border: '1px solid #333',
+              color: '#999', borderRadius: 8, padding: '12px 28px',
+              cursor: 'pointer', fontSize: 14,
             }}
-            onMouseEnter={e => { e.target.style.color = '#e5e5e5'; e.target.style.borderColor = 'rgba(255,255,255,0.25)'; }}
-            onMouseLeave={e => { e.target.style.color = '#a3a3a3'; e.target.style.borderColor = 'rgba(255,255,255,0.12)'; }}
           >
             I'm a Recipient
           </button>
-        </motion.div>
+        </div>
 
-        {/* Why existing tools fail */}
-        <motion.div variants={stagger.item} style={{ marginBottom: 40 }}>
-          <div style={{ fontSize: 11, color: '#555', letterSpacing: 2, marginBottom: 16, fontFamily: "'JetBrains Mono', monospace" }}>
-            WHY EXISTING TOOLS FAIL AT THE CRITICAL MOMENT
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, maxWidth: 540, margin: '0 auto' }}>
-            {FAILS.map(({ icon: Icon, tool, reason }) => (
+        {/* why tools fail */}
+        <div style={{ marginBottom: 32 }}>
+          <p style={{ fontSize: 11, color: '#555', letterSpacing: 1.5, marginBottom: 14, textTransform: 'uppercase' }}>
+            Why existing tools fail at the critical moment
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, maxWidth: 480, margin: '0 auto' }}>
+            {FAILS.map(({ tool, reason }) => (
               <div key={tool} style={{
-                background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)',
-                borderRadius: 10, padding: '12px 16px',
-                display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left',
+                background: '#151515', border: '1px solid #222',
+                borderRadius: 8, padding: '10px 14px', textAlign: 'left',
               }}>
-                <ShieldX size={14} color="#ff2d55" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <span style={{ color: '#e5e5e5', fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
-                    {tool}
-                  </span>
-                  <div style={{ color: '#a3a3a3', fontSize: 11, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
-                    {reason}
-                  </div>
+                <div style={{ color: '#ddd', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
+                  ✕ {tool}
+                </div>
+                <div style={{ color: '#777', fontSize: 11 }}>
+                  {reason}
                 </div>
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
-        {/* Trust bar */}
-        <motion.div variants={stagger.item}>
-          <div style={{
-            display: 'inline-flex', gap: 0, flexWrap: 'wrap', justifyContent: 'center',
-            fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-            color: '#a3a3a3', letterSpacing: 0.5,
-          }}>
-            {['AES-256-GCM', 'ECDSA-signed heartbeats', 'Shamir(2,3)', 'No central server'].map((item, i, arr) => (
-              <span key={item}>
-                <span style={{ color: '#555' }}>{i > 0 ? ' • ' : ''}</span>
-                <span style={{ color: '#00f5ff' }}>{item}</span>
-              </span>
-            ))}
-          </div>
-        </motion.div>
-      </motion.div>
+        {/* tech badges */}
+        <div style={{ fontSize: 11, color: '#555' }}>
+          AES-256-GCM · ECDSA-signed heartbeats · Shamir(2,3) · No central server
+        </div>
+      </div>
     </div>
   );
 }

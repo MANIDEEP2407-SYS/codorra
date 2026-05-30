@@ -1,7 +1,7 @@
 {
-  "name": "truthswitch-relay",
+  "name": "satyaraksha-relay",
   "version": "1.0.0",
-  "description": "TruthSwitch relay node server",
+  "description": "SatyaRaksha relay node server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,13 +11,15 @@
   },
   "dependencies": {
     "axios": "^1.7.2",
-    "express": "^4.19.2",
     "better-sqlite3": "^12.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.5.2",
     "helmet": "^7.1.0",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13",
+    "openpgp": "^6.3.0",
     "secrets.js-grempe": "^2.0.0"
   }
 }

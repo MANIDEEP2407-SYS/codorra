@@ -1,6 +1,6 @@
 @echo off
 echo ╔══════════════════════════════════════╗
-echo ║       TRUTHSWITCH — STARTUP          ║
+echo ║       SATYARAKSHA — STARTUP          ║
 echo ╚══════════════════════════════════════╝
 echo.
 

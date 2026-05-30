@@ -2,13 +2,17 @@ const Database = require('better-sqlite3');
 const path = require('path');
 
 const NODE_ID = (process.env.NODE_ID || 'A').trim();
+// each relay node gets its own sqlite db file
 const dbPath = path.join(__dirname, `relay_${NODE_ID}.db`);
 
 const db = new Database(dbPath);
 
+// WAL mode for better concurrent reads
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// main tables - vaults hold the encrypted data, audit_log tracks everything,
+// consensus_shards stores shards received from peer nodes during release
 db.exec(`
   CREATE TABLE IF NOT EXISTS vaults (
     id TEXT PRIMARY KEY,
@@ -19,6 +23,7 @@ db.exec(`
     file_name TEXT,
     public_key TEXT,
     recipients TEXT,
+    recipient_pgp_keys TEXT,
     release_message TEXT,
     heartbeat_interval INTEGER DEFAULT 60,
     grace_period INTEGER DEFAULT 2,
@@ -45,6 +50,7 @@ db.exec(`
   );
 `);
 
+// simple helper to append to the audit trail
 function logEvent(vaultId, event, detail = '') {
   db.prepare('INSERT INTO audit_log (vault_id, event, detail, ts) VALUES (?, ?, ?, ?)')
     .run(vaultId, event, detail, Date.now());

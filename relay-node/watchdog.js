@@ -3,10 +3,12 @@ const axios = require('axios');
 const { db, logEvent } = require('./db');
 const { attemptRelease } = require('./consensus');
 
+// prevents re-entry in case cron fires while we are still checking
 let isRunning = false;
 
 function startWatchdog() {
-  // Run every 60 seconds (60s in demo = 1 day real-world)
+  // runs every minute to check if anyone missed their heartbeat
+  // (60s in demo = 1 day real-world)
   cron.schedule('* * * * *', async () => {
     if (isRunning) return;
     isRunning = true;
@@ -19,6 +21,7 @@ function startWatchdog() {
   console.log('[WATCHDOG] Started — checking every 60s');
 }
 
+// loop through all unreleased vaults and see who's gone quiet
 async function checkVaults() {
   const vaults = db.prepare('SELECT * FROM vaults WHERE released=0').all();
   const now = Date.now();
@@ -29,6 +32,7 @@ async function checkVaults() {
     const elapsed = now - vault.last_heartbeat;
     const deadline = vault.heartbeat_interval * 1000;
 
+    // if they haven't checked in within the interval, bump the missed count
     if (elapsed > deadline) {
       const newMissed = vault.missed_heartbeats + 1;
       db.prepare('UPDATE vaults SET missed_heartbeats=? WHERE id=?').run(newMissed, vault.id);
@@ -36,6 +40,7 @@ async function checkVaults() {
 
       console.log(`[WATCHDOG] Vault ${vault.id}: missed ${newMissed}/${vault.grace_period}`);
 
+      // once they've missed enough heartbeats, start the release process
       if (newMissed >= vault.grace_period) {
         console.log(`[WATCHDOG] Grace period exceeded for ${vault.id} — initiating consensus`);
         logEvent(vault.id, 'CONSENSUS_INITIATING', `node=${process.env.NODE_ID}`);
@@ -45,6 +50,7 @@ async function checkVaults() {
   }
 }
 
+// send our shard to all peers so they can try to reconstruct
 async function initiateConsensus(vault) {
   let peerUrls = [];
   try {

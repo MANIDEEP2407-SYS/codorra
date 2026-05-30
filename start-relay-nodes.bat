@@ -1,5 +1,5 @@
 @echo off
-echo Starting TruthSwitch relay nodes...
+echo Starting SatyaRaksha relay nodes...
 
 :: Node A (port 3001)
 start "RELAY-ALPHA [3001]" cmd /k "cd /d %~dp0relay-node && set NODE_ID=A && set PORT=3001 && set PEER_URLS=[\"http://localhost:3002\",\"http://localhost:3003\"] && node server.js"

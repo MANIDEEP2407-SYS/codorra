@@ -1,11 +1,11 @@
-# Security Threat Model — TruthSwitch
+# Security Threat Model — SatyaRaksha
 
 ## Why This Exists
 
 In 2022, a Lebanese journalist was detained hours after documenting government corruption.
 Her USB drive was seized immediately. Her story died with her arrest.
 
-TruthSwitch exists because existing tools fail at the moment they matter most:
+SatyaRaksha exists because existing tools fail at the moment they matter most:
 - Signal: seized with the phone
 - ProtonMail: requires the journalist to be alive to press send
 - Tor: doesn't help when you're physically arrested
@@ -66,7 +66,7 @@ At 7-day interval + 2 grace periods = 21 days of missed heartbeats before releas
 ### 5. Compromised Recipient Email
 Release email intercepted or recipient email compromised.
 **Mitigation**: Note for production — recipient should use PGP-encrypted email (ProtonMail).
-TruthSwitch does not currently encrypt the release email in transit.
+SatyaRaksha does not currently encrypt the release email in transit.
 
 ### 6. Browser Attacks (XSS)
 Malicious script extracts AES key or ECDSA private key before encryption.
