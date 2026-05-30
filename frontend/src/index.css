@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --cyan: #00f5ff;
+  --purple: #c026d3;
+  --red: #ff2d55;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --text: #e5e5e5;
+  --muted: #a3a3a3;
+  --border: rgba(255, 255, 255, 0.08);
+  --primary: #00f5ff;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Ghost layer scroll animation */
+@keyframes ghostScroll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* Dot pulse */
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* Critical body pulse */
+@keyframes critical-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%       { filter: brightness(0.93); }
+}
+body.critical-pulse {
+  animation: critical-pulse 3s ease-in-out infinite;
+}
+
+/* Selection */
+::selection {
+  background: rgba(0, 245, 255, 0.2);
+  color: #fff;
+}
+
+/* Input resets */
+input, textarea, select {
+  background: rgba(255,255,255,0.03);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #e5e5e5;
+  font-size: 13px;
+  padding: 10px 14px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(0,245,255,0.35);
+}
+select option {
+  background: #111;
+  color: #e5e5e5;
+}
+
+/* Smooth transitions for threat level changes */
+* {
+  transition: color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+canvas, svg, img, video {
+  transition: none;
+}

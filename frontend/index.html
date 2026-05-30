@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TruthSwitch — Cryptographic Dead Man's Switch</title>
+    <meta name="description" content="If they silence you, the truth still speaks. A cryptographic dead man's switch for journalists and whistleblowers." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>" />
+    <meta name="theme-color" content="#0a0a0a" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Temporary debug catcher — prints any startup crash into the page
+      window.addEventListener('error', function (e) {
+        var root = document.getElementById('root');
+        if (root && !root.hasChildNodes()) {
+          root.innerHTML =
+            '<pre style="color:#ff2d55;background:#0a0a0a;padding:24px;font:12px monospace;white-space:pre-wrap;min-height:100vh;margin:0">' +
+            'STARTUP ERROR:\n\n' + (e.message || e) + '\n\n' +
+            (e.filename ? 'at ' + e.filename + ':' + e.lineno + ':' + e.colno : '') +
+            (e.error && e.error.stack ? '\n\n' + e.error.stack : '') +
+            '</pre>';
+        }
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        var root = document.getElementById('root');
+        if (root && !root.hasChildNodes()) {
+          root.innerHTML =
+            '<pre style="color:#f59e0b;background:#0a0a0a;padding:24px;font:12px monospace;white-space:pre-wrap;min-height:100vh;margin:0">' +
+            'PROMISE REJECTION:\n\n' +
+            (e.reason && e.reason.stack ? e.reason.stack : (e.reason || 'unknown')) +
+            '</pre>';
+        }
+      });
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
