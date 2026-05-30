@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -9,19 +10,16 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis',
-    'process.env': '{}',
   },
   resolve: {
     alias: {
-      // Polyfill Node.js modules for secrets.js-grempe in the browser
-      crypto: 'crypto-browserify',
-      buffer: 'buffer',
+      // secrets.js-grempe does require("crypto"); the browser-native
+      // crypto.getRandomValues path is all it needs — avoid the heavy
+      // crypto-browserify chain (readable-stream/process) that breaks in-browser.
+      crypto: path.resolve(__dirname, 'src/lib/crypto-shim.js'),
     },
   },
   optimizeDeps: {
     include: ['secrets.js-grempe'],
-    esbuildOptions: {
-      define: { global: 'globalThis' },
-    },
   },
 });

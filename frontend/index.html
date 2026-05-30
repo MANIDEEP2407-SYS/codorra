@@ -10,30 +10,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Temporary debug catcher — prints any startup crash into the page
-      window.addEventListener('error', function (e) {
-        var root = document.getElementById('root');
-        if (root && !root.hasChildNodes()) {
-          root.innerHTML =
-            '<pre style="color:#ff2d55;background:#0a0a0a;padding:24px;font:12px monospace;white-space:pre-wrap;min-height:100vh;margin:0">' +
-            'STARTUP ERROR:\n\n' + (e.message || e) + '\n\n' +
-            (e.filename ? 'at ' + e.filename + ':' + e.lineno + ':' + e.colno : '') +
-            (e.error && e.error.stack ? '\n\n' + e.error.stack : '') +
-            '</pre>';
-        }
-      });
-      window.addEventListener('unhandledrejection', function (e) {
-        var root = document.getElementById('root');
-        if (root && !root.hasChildNodes()) {
-          root.innerHTML =
-            '<pre style="color:#f59e0b;background:#0a0a0a;padding:24px;font:12px monospace;white-space:pre-wrap;min-height:100vh;margin:0">' +
-            'PROMISE REJECTION:\n\n' +
-            (e.reason && e.reason.stack ? e.reason.stack : (e.reason || 'unknown')) +
-            '</pre>';
-        }
-      });
-    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
