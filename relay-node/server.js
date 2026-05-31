@@ -25,8 +25,21 @@ const limiter = rateLimit({
 // security headers + cors wide open for dev, tighten later for prod
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '200mb' }));
 app.use(limiter);
+
+// Apply a global limiter for general endpoints but allow frequent heartbeats.
+// Heartbeat pings are expected often from depositors, so give them a higher limit.
+const heartbeatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 1000, // allow many heartbeat pings per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many heartbeat requests, slow down.' }
+});
+
+// Use heartbeat limiter only for the heartbeat route; keep the global limiter for others
+app.use('/heartbeat', heartbeatLimiter);
 
 // Health check
 app.get('/health', (_, res) => {
@@ -80,7 +93,7 @@ app.post('/deposit', async (req, res) => {
     const forwardBody = { ...req.body, _forwarded: true };
     const peerForwards = await Promise.allSettled(
       peerUrls.map(url =>
-        axios.post(`${url}/deposit`, forwardBody, { timeout: 8000 })
+        axios.post(`${url}/deposit`, forwardBody, { timeout: 60000 })
       )
     );
     peerForwards.forEach((r, i) => {
@@ -225,6 +238,45 @@ app.post('/trigger-release', async (req, res) => {
     // Release likely happened on a peer node — return success anyway
     res.json({ success: true, released: true, etherealUrl: null });
   }
+});
+
+// POST /reset-vault — delete a specific vault from this node (demo cleanup)
+app.post('/reset-vault', async (req, res) => {
+  const { vaultId, _forwarded } = req.body;
+  if (!vaultId) return res.status(400).json({ error: 'Missing vaultId' });
+
+  db.prepare('DELETE FROM vaults WHERE id=?').run(vaultId);
+  db.prepare('DELETE FROM audit_log WHERE vault_id=?').run(vaultId);
+  db.prepare('DELETE FROM consensus_shards WHERE vault_id=?').run(vaultId);
+
+  // forward to peers
+  if (!_forwarded) {
+    const peerUrls = (() => { try { return JSON.parse(process.env.PEER_URLS || '[]'); } catch { return []; } })();
+    await Promise.allSettled(
+      peerUrls.map(url => axios.post(`${url}/reset-vault`, { vaultId, _forwarded: true }, { timeout: 5000 }))
+    );
+  }
+
+  res.json({ success: true, nodeId: NODE_ID, deleted: vaultId });
+});
+
+// POST /reset-all — wipe all vaults, logs, shards (full demo reset)
+app.post('/reset-all', async (req, res) => {
+  const { _forwarded } = req.body || {};
+
+  db.prepare('DELETE FROM vaults').run();
+  db.prepare('DELETE FROM audit_log').run();
+  db.prepare('DELETE FROM consensus_shards').run();
+
+  // forward to peers
+  if (!_forwarded) {
+    const peerUrls = (() => { try { return JSON.parse(process.env.PEER_URLS || '[]'); } catch { return []; } })();
+    await Promise.allSettled(
+      peerUrls.map(url => axios.post(`${url}/reset-all`, { _forwarded: true }, { timeout: 5000 }))
+    );
+  }
+
+  res.json({ success: true, nodeId: NODE_ID, message: 'All demo data cleared' });
 });
 
 app.listen(PORT, () => {

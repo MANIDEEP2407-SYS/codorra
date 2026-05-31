@@ -44,7 +44,17 @@ async function checkVaults() {
       if (newMissed >= vault.grace_period) {
         console.log(`[WATCHDOG] Grace period exceeded for ${vault.id} — initiating consensus`);
         logEvent(vault.id, 'CONSENSUS_INITIATING', `node=${process.env.NODE_ID}`);
-        await initiateConsensus({ ...vault, missed_heartbeats: newMissed });
+        // Prevent rapid re-triggering of consensus for the same vault by checking
+        // when we last attempted consensus. If a recent attempt exists, skip.
+        const fresh = db.prepare('SELECT last_consensus FROM vaults WHERE id=?').get(vault.id) || {};
+        const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+        if (fresh.last_consensus && (now - fresh.last_consensus) < COOLDOWN_MS) {
+          logEvent(vault.id, 'CONSENSUS_SKIPPED', `cooldown=${COOLDOWN_MS}`);
+          console.log(`[WATCHDOG] Skipping consensus for ${vault.id} (cooldown)`);
+        } else {
+          db.prepare('UPDATE vaults SET last_consensus=? WHERE id=?').run(now, vault.id);
+          await initiateConsensus({ ...vault, missed_heartbeats: newMissed });
+        }
       }
     }
   }

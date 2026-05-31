@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import EncryptionVisualizer from '../components/EncryptionVisualizer';
 import CryptoReceipt from '../components/CryptoReceipt';
 import useVaultStore from '../store/useVaultStore';
-import { encryptFile, hashFile, generateDepositorKeypair } from '../lib/crypto';
+import { encryptFile, encryptFiles, hashFile, hashFiles, generateDepositorKeypair } from '../lib/crypto';
 import { splitKey } from '../lib/shamir';
 import { depositShard } from '../lib/api';
 
@@ -20,14 +20,15 @@ const GRACE = [
   { label: '2 missed (default)', value: 2 },
   { label: '3 missed (lenient)', value: 3 },
 ];
-const PHASES = ['File Loaded', 'AES-256 Encrypt', 'Key Split 2-of-3', 'Route Shards', 'Vault Sealed'];
+const PHASES = ['Files Loaded', 'AES-256 Encrypt', 'Key Split 2-of-3', 'Route Shards', 'Vault Sealed'];
 
 export default function Deposit() {
   const nav = useNavigate();
   const vizRef = useRef(null);
 
-  const [file, setFile] = useState(null);
-  const [hash, setHash] = useState(null);
+  // multiple files support
+  const [files, setFiles] = useState([]);
+  const [hashes, setHashes] = useState({});  // { filename: hash }
   // recipients is now an array of { email, pgpKey }
   const [recipients, setRecipients] = useState([]);
   const [emailInput, setEmailInput] = useState('');
@@ -46,19 +47,42 @@ export default function Deposit() {
 
   const { setVault, relayNodes } = useVaultStore();
 
-  // hash file as soon as its selected
-  const handleFile = useCallback(async (f) => {
-    setFile(f);
-    setHash(null);
+  // helper: format file size
+  const fmtSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // hash file as soon as it's added
+  const addFiles = useCallback(async (newFiles) => {
+    const fileArr = Array.from(newFiles);
+    setFiles(prev => {
+      // avoid duplicates by name+size
+      const existing = new Set(prev.map(f => `${f.name}_${f.size}`));
+      const unique = fileArr.filter(f => !existing.has(`${f.name}_${f.size}`));
+      return [...prev, ...unique];
+    });
     setPhase(0);
-    const h = await hashFile(f);
-    setHash(h);
+    // hash each new file
+    for (const f of fileArr) {
+      const h = await hashFile(f);
+      setHashes(prev => ({ ...prev, [f.name]: h }));
+    }
   }, []);
+
+  const removeFile = (index) => {
+    setFiles(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (updated.length === 0) setPhase(-1);
+      return updated;
+    });
+  };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
   };
 
   // validate PGP key format - just a basic check
@@ -93,13 +117,29 @@ export default function Deposit() {
 
   // main deposit flow
   const handleDeposit = async () => {
-    if (!file || recipients.length === 0) return;
+    if (files.length === 0 || recipients.length === 0) return;
     setLoading(true);
     setError(null);
     try {
       setPhase(1);
-      const { keyHex, ivHex, ciphertextB64 } = await encryptFile(file);
-      const fileHash = await hashFile(file);
+
+      // encrypt: single file → original path, multiple → bundle manifest
+      let keyHex, ivHex, ciphertextB64, fileHash, fileName;
+      if (files.length === 1) {
+        const result = await encryptFile(files[0]);
+        keyHex = result.keyHex;
+        ivHex = result.ivHex;
+        ciphertextB64 = result.ciphertextB64;
+        fileHash = await hashFile(files[0]);
+        fileName = files[0].name;
+      } else {
+        const result = await encryptFiles(files);
+        keyHex = result.keyHex;
+        ivHex = result.ivHex;
+        ciphertextB64 = result.ciphertextB64;
+        fileHash = await hashFiles(files);
+        fileName = files.map(f => f.name).join(', ');
+      }
 
       setPhase(2);
       vizRef.current?.start();
@@ -118,7 +158,7 @@ export default function Deposit() {
 
       const payload = {
         vaultId, shards, ciphertextB64, ivHex, fileHash,
-        fileName: file.name, publicKeyB64,
+        fileName, fileCount: files.length, publicKeyB64,
         recipients: emailList,
         recipientPgpKeys: pgpMap,
         releaseMessage: message, heartbeatInterval: interval, gracePeriod: grace,
@@ -126,8 +166,9 @@ export default function Deposit() {
       await Promise.all([0, 1, 2].map(i => depositShard(i, payload)));
 
       setPhase(4);
+      const totalSize = files.reduce((s, f) => s + f.size, 0);
       setVault(vaultId,
-        { fileName: file.name, fileSize: file.size, hash: fileHash, ivHex, recipients: emailList, message },
+        { fileName, fileCount: files.length, fileSize: totalSize, hash: fileHash, ivHex, recipients: emailList, message },
         keypair, publicKeyB64, interval, grace
       );
       setReceipt({ vaultId, keypair, publicKeyB64 });
@@ -141,7 +182,8 @@ export default function Deposit() {
     }
   };
 
-  const canDeposit = file && recipients.length > 0 && !loading;
+  const canDeposit = files.length > 0 && recipients.length > 0 && !loading;
+  const totalSize = files.reduce((s, f) => s + f.size, 0);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', position: 'relative', zIndex: 1 }}>
@@ -163,40 +205,77 @@ export default function Deposit() {
           </p>
         </div>
 
-        {/* file upload */}
+        {/* file upload - now supports multiple */}
         <div>
-          <label style={labelStyle}>Evidence File</label>
+          <label style={labelStyle}>Evidence Files</label>
           <div
             onDragOver={e => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => document.getElementById('fileInput').click()}
             style={{
-              border: `1px dashed ${dragOver ? '#4a9eff' : file ? '#4a9eff55' : '#333'}`,
+              border: `1px dashed ${dragOver ? '#4a9eff' : files.length > 0 ? '#4a9eff55' : '#333'}`,
               borderRadius: 8, padding: '20px 16px', cursor: 'pointer', textAlign: 'center',
               background: dragOver ? '#4a9eff08' : '#141414',
             }}
           >
-            <input id="fileInput" type="file" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
-            {file ? (
+            <input
+              id="fileInput"
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              onChange={e => { if (e.target.files.length > 0) addFiles(e.target.files); e.target.value = ''; }}
+            />
+            {files.length > 0 ? (
               <div>
-                <div style={{ color: '#4a9eff', fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{file.name}</div>
-                <div style={{ color: '#666', fontSize: 11 }}>{(file.size / 1024).toFixed(1)} KB</div>
-                {hash && (
-                  <div style={{ marginTop: 8, fontFamily: 'monospace', fontSize: 10, color: '#888' }}>
-                    SHA-256: {hash.slice(0, 20)}...
-                    <span style={{ marginLeft: 8, color: '#5cb85c' }}>✓ hashed</span>
-                  </div>
-                )}
+                <div style={{ color: '#4a9eff', fontSize: 13, fontWeight: 600, marginBottom: 3 }}>
+                  {files.length} file{files.length > 1 ? 's' : ''} selected — click to add more
+                </div>
+                <div style={{ color: '#666', fontSize: 11 }}>
+                  Total: {fmtSize(totalSize)}
+                </div>
               </div>
             ) : (
               <div>
                 <div style={{ fontSize: 24, marginBottom: 6 }}>📁</div>
-                <div style={{ color: '#888', fontSize: 13 }}>Drop file here or click to browse</div>
-                <div style={{ color: '#555', fontSize: 11, marginTop: 3 }}>Any file type — encrypted client-side</div>
+                <div style={{ color: '#888', fontSize: 13 }}>Drop files here or click to browse</div>
+                <div style={{ color: '#555', fontSize: 11, marginTop: 3 }}>Select multiple files — all encrypted client-side</div>
               </div>
             )}
           </div>
+
+          {/* file list */}
+          {files.length > 0 && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {files.map((f, i) => (
+                <div key={`${f.name}_${f.size}_${i}`} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: '#141414', border: '1px solid #222', borderRadius: 6,
+                  padding: '6px 10px', fontSize: 12,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#aaa', fontSize: 11 }}>📄</span>
+                      <span style={{ color: '#ccc', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {f.name}
+                      </span>
+                      <span style={{ color: '#555', fontSize: 10, flexShrink: 0 }}>{fmtSize(f.size)}</span>
+                    </div>
+                    {hashes[f.name] && (
+                      <div style={{ fontFamily: 'monospace', fontSize: 9, color: '#666', marginTop: 2, marginLeft: 20 }}>
+                        SHA-256: {hashes[f.name].slice(0, 16)}...
+                        <span style={{ marginLeft: 6, color: '#5cb85c' }}>✓</span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', padding: '0 4px', fontSize: 14 }}
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* recipients section */}
@@ -330,7 +409,7 @@ export default function Deposit() {
           padding: '12px 0', fontSize: 14, fontWeight: 600,
           cursor: canDeposit ? 'pointer' : 'not-allowed', width: '100%',
         }}>
-          {loading ? 'Encrypting...' : 'Encrypt & Deposit →'}
+          {loading ? `Encrypting ${files.length} file${files.length > 1 ? 's' : ''}...` : `Encrypt & Deposit ${files.length > 0 ? `(${files.length} file${files.length > 1 ? 's' : ''})` : ''} →`}
         </button>
 
         {/* progress steps */}

@@ -7,7 +7,7 @@ import ThreatLevelBar from '../components/ThreatLevelBar';
 import CinematicRelease from '../components/CinematicRelease';
 import useVaultStore from '../store/useVaultStore';
 import { signHeartbeat } from '../lib/crypto';
-import { sendHeartbeat, getAuditLog, triggerConsensus } from '../lib/api';
+import { sendHeartbeat, getAuditLog, triggerConsensus, resetVault, resetAll } from '../lib/api';
 
 export default function Dashboard() {
   const nav = useNavigate();
@@ -17,6 +17,7 @@ export default function Dashboard() {
     released, auditLog, gracePeriod, missedHeartbeats,
     sendHeartbeat: storeHeartbeat, triggerRelease: storeRelease,
     tickCountdown, appendAuditLog, incrementMissed, setThreatLevel,
+    resetStore,
   } = useVaultStore();
 
   const [copied, setCopied] = useState(false);
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [showRelease, setShowRelease] = useState(false);
   const [heartbeatSent, setHeartbeatSent] = useState(false);
   const [silent, setSilent] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => { if (!vaultId) nav('/'); }, [vaultId, nav]);
 
@@ -220,6 +222,73 @@ export default function Dashboard() {
             }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#e85050', marginBottom: 2 }}>Trigger Immediate Release</div>
               <div style={{ fontSize: 11, color: '#888' }}>Skip countdown, initiate consensus now</div>
+            </button>
+          </div>
+        </section>
+
+        {/* demo controls */}
+        <section style={{ ...cardStyle, borderColor: '#2a2a3a' }}>
+          <h2 style={{ ...sectionTitle, color: '#8ab4f8', marginBottom: 12 }}>🔄 Demo Controls</h2>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={async () => {
+                setResetting(true);
+                try {
+                  if (vaultId) await resetVault(vaultId);
+                  resetStore();
+                  nav('/');
+                } catch (e) {
+                  console.error('Reset failed:', e);
+                  resetStore();
+                  nav('/');
+                }
+              }}
+              disabled={resetting}
+              style={{
+                background: '#151520', border: '1px solid #2a2a4a', borderRadius: 6,
+                padding: '10px 18px', cursor: resetting ? 'not-allowed' : 'pointer',
+                opacity: resetting ? 0.5 : 1, textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#8ab4f8', marginBottom: 2 }}>
+                {resetting ? 'Resetting...' : 'Reset This Vault'}
+              </div>
+              <div style={{ fontSize: 11, color: '#888' }}>Delete current vault data & return to home</div>
+            </button>
+            <button
+              onClick={async () => {
+                setResetting(true);
+                try {
+                  await resetAll();
+                  resetStore();
+                  nav('/');
+                } catch (e) {
+                  console.error('Reset all failed:', e);
+                  resetStore();
+                  nav('/');
+                }
+              }}
+              disabled={resetting}
+              style={{
+                background: '#151520', border: '1px solid #2a2a4a', borderRadius: 6,
+                padding: '10px 18px', cursor: resetting ? 'not-allowed' : 'pointer',
+                opacity: resetting ? 0.5 : 1, textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#8ab4f8', marginBottom: 2 }}>
+                {resetting ? 'Resetting...' : 'Reset All Demo Data'}
+              </div>
+              <div style={{ fontSize: 11, color: '#888' }}>Wipe all vaults across all nodes</div>
+            </button>
+            <button
+              onClick={() => { resetStore(); nav('/deposit'); }}
+              style={{
+                background: '#152015', border: '1px solid #2a4a2a', borderRadius: 6,
+                padding: '10px 18px', cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#5cb85c', marginBottom: 2 }}>New Deposit</div>
+              <div style={{ fontSize: 11, color: '#888' }}>Start a fresh deposit without clearing server data</div>
             </button>
           </div>
         </section>

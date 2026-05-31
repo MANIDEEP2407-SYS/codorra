@@ -3,26 +3,39 @@ echo ╔════════════════════════
 echo ║       SATYARAKSHA — STARTUP          ║
 echo ╚══════════════════════════════════════╝
 echo.
+echo  Starting all services in this window...
+echo  Press Ctrl+C to stop everything.
+echo.
 
-:: Start relay nodes
-start "RELAY-ALPHA [3001]" cmd /k "cd /d %~dp0relay-node && set NODE_ID=A && set PORT=3001 && set PEER_URLS=[\"http://localhost:3002\",\"http://localhost:3003\"] && node server.js"
-timeout /t 1 /nobreak >nul
+:: Start relay nodes in background (no new windows)
+cd /d %~dp0relay-node
 
-start "RELAY-BETA  [3002]" cmd /k "cd /d %~dp0relay-node && set NODE_ID=B && set PORT=3002 && set PEER_URLS=[\"http://localhost:3001\",\"http://localhost:3003\"] && node server.js"
-timeout /t 1 /nobreak >nul
+set NODE_ID=A
+set PORT=3001
+set PEER_URLS=["http://localhost:3002","http://localhost:3003"]
+start /b node server.js
+echo  [OK] Relay Alpha  → http://localhost:3001
 
-start "RELAY-GAMMA [3003]" cmd /k "cd /d %~dp0relay-node && set NODE_ID=C && set PORT=3003 && set PEER_URLS=[\"http://localhost:3001\",\"http://localhost:3002\"] && node server.js"
-timeout /t 2 /nobreak >nul
+set NODE_ID=B
+set PORT=3002
+set PEER_URLS=["http://localhost:3001","http://localhost:3003"]
+start /b node server.js
+echo  [OK] Relay Beta   → http://localhost:3002
 
-:: Start frontend
-start "FRONTEND [5173]" cmd /k "cd /d %~dp0frontend && npm run dev"
+set NODE_ID=C
+set PORT=3003
+set PEER_URLS=["http://localhost:3001","http://localhost:3002"]
+start /b node server.js
+echo  [OK] Relay Gamma  → http://localhost:3003
 
 echo.
-echo All services starting...
+
+:: Start frontend (runs in foreground so this window stays open)
+cd /d %~dp0frontend
+echo  [OK] Frontend     → http://localhost:5173
 echo.
-echo   Frontend : http://localhost:5173
-echo   Alpha    : http://localhost:3001/health
-echo   Beta     : http://localhost:3002/health
-echo   Gamma    : http://localhost:3003/health
+echo ══════════════════════════════════════
+echo  All services running. Ctrl+C to stop.
+echo ══════════════════════════════════════
 echo.
-pause
+npm run dev

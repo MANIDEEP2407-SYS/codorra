@@ -89,6 +89,29 @@ const useVaultStore = create((set, get) => ({
   incrementMissed: () => set(state => ({
     missedHeartbeats: state.missedHeartbeats + 1,
   })),
+
+  // full reset — clears all state back to defaults (for demo resets)
+  resetStore: () => set({
+    vaultId: null,
+    threatLevel: 'safe',
+    heartbeatInterval: 60,
+    secondsRemaining: 60,
+    lastHeartbeat: null,
+    released: false,
+    depositorKeypair: null,
+    publicKeyB64: null,
+    evidence: null,
+    relayNodes: [
+      { id: 'A', name: 'Alpha', url: 'http://localhost:3001', online: true, ping: null, shardStored: false },
+      { id: 'B', name: 'Beta',  url: 'http://localhost:3002', online: true, ping: null, shardStored: false },
+      { id: 'C', name: 'Gamma', url: 'http://localhost:3003', online: true, ping: null, shardStored: false },
+    ],
+    phase: 'idle',
+    auditLog: [],
+    gracePeriod: 2,
+    missedHeartbeats: 0,
+    etherealUrl: null,
+  }),
 }));
 
 export default useVaultStore;

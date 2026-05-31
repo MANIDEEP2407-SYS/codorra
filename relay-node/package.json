@@ -5,9 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "node-a": "NODE_ID=A PORT=3001 PEER_URLS='[\"http://localhost:3002\",\"http://localhost:3003\"]' node server.js",
-    "node-b": "NODE_ID=B PORT=3002 PEER_URLS='[\"http://localhost:3001\",\"http://localhost:3003\"]' node server.js",
-    "node-c": "NODE_ID=C PORT=3003 PEER_URLS='[\"http://localhost:3001\",\"http://localhost:3002\"]' node server.js"
+    "node-a": "cross-env NODE_ID=A PORT=3001 PEER_URLS='[\"http://localhost:3002\",\"http://localhost:3003\"]' node server.js",
+    "node-b": "cross-env NODE_ID=B PORT=3002 PEER_URLS='[\"http://localhost:3001\",\"http://localhost:3003\"]' node server.js",
+    "node-c": "cross-env NODE_ID=C PORT=3003 PEER_URLS='[\"http://localhost:3001\",\"http://localhost:3002\"]' node server.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -20,6 +20,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13",
     "openpgp": "^6.3.0",
-    "secrets.js-grempe": "^2.0.0"
+    "secrets.js-grempe": "^2.0.0",
+    "cross-env": "^7.0.3"
   }
 }

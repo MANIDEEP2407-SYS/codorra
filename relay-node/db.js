@@ -56,4 +56,23 @@ function logEvent(vaultId, event, detail = '') {
     .run(vaultId, event, detail, Date.now());
 }
 
+// Lightweight migration: ensure expected optional columns exist (handles existing DBs)
+try {
+  const cols = db.prepare("PRAGMA table_info(vaults)").all().map(c => c.name);
+  const ensureColumn = (name, type) => {
+    if (!cols.includes(name)) {
+      db.prepare(`ALTER TABLE vaults ADD COLUMN ${name} ${type}`).run();
+      logEvent('MIGRATION', 'SCHEMA_CHANGED', `added column ${name}`);
+    }
+  };
+
+  ensureColumn('recipient_pgp_keys', 'TEXT');
+  ensureColumn('missed_heartbeats', 'INTEGER DEFAULT 0');
+  ensureColumn('last_heartbeat', 'INTEGER');
+  ensureColumn('created_at', 'INTEGER');
+  ensureColumn('last_consensus', 'INTEGER');
+} catch (e) {
+  console.error('DB migration check failed:', e.message);
+}
+
 module.exports = { db, logEvent };

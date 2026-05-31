@@ -2,7 +2,19 @@
 // we dont use any external crypto library for the actual encryption
 // just the browser's built-in stuff which is way more trustworthy
 
-// encrypts a file using AES-256-GCM and returns the key, IV, and ciphertext
+// helper: convert ArrayBuffer to base64
+function arrayBufferToB64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  // process in chunks to avoid call-stack overflow on large files
+  const CHUNK = 8192;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+// encrypts a single file using AES-256-GCM and returns the key, IV, and ciphertext
 export async function encryptFile(file) {
   const arrayBuffer = await file.arrayBuffer();
 
@@ -27,17 +39,71 @@ export async function encryptFile(file) {
     .map(b => b.toString(16).padStart(2, '0')).join('');
 
   // base64 encode the ciphertext for transport
-  const ciphertextB64 = btoa(
-    Array.from(new Uint8Array(ciphertext)).map(b => String.fromCharCode(b)).join('')
-  );
+  const ciphertextB64 = arrayBufferToB64(ciphertext);
 
   return { keyHex, ivHex, ciphertextB64 };
 }
 
-// SHA-256 hash of a file - used for integrity verification
+// encrypts multiple files by bundling them into a JSON manifest first,
+// then encrypting the whole manifest as a single AES-256-GCM blob.
+// This keeps the Shamir key-split logic unchanged (one key → 3 shards).
+export async function encryptFiles(files) {
+  // build manifest: [{name, size, dataB64}, ...]
+  const manifest = [];
+  for (const file of files) {
+    const buf = await file.arrayBuffer();
+    manifest.push({
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      dataB64: arrayBufferToB64(buf),
+    });
+  }
+
+  const manifestJson = JSON.stringify(manifest);
+  const manifestBytes = new TextEncoder().encode(manifestJson);
+
+  // generate a fresh 256-bit key
+  const key = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+  );
+
+  // 12 byte random IV
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  // encrypt the whole manifest
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, key, manifestBytes
+  );
+
+  const rawKey = await crypto.subtle.exportKey('raw', key);
+  const keyHex = Array.from(new Uint8Array(rawKey))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const ivHex = Array.from(iv)
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const ciphertextB64 = arrayBufferToB64(ciphertext);
+
+  return { keyHex, ivHex, ciphertextB64 };
+}
+
+// SHA-256 hash of a single file - used for integrity verification
 export async function hashFile(file) {
   const buffer = await file.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// SHA-256 hash multiple files → returns combined hash of all content
+export async function hashFiles(files) {
+  const allBuffers = [];
+  for (const f of files) allBuffers.push(await f.arrayBuffer());
+  // concatenate all buffers
+  const totalLen = allBuffers.reduce((s, b) => s + b.byteLength, 0);
+  const combined = new Uint8Array(totalLen);
+  let offset = 0;
+  for (const b of allBuffers) { combined.set(new Uint8Array(b), offset); offset += b.byteLength; }
+  const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
   return Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 }

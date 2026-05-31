@@ -9,8 +9,9 @@ const RELAY_URLS = [
 ];
 
 // create axios clients for each relay node
+// 120s timeout — large encrypted payloads (multi-file) need time to upload
 const clients = RELAY_URLS.map(url =>
-  axios.create({ baseURL: url, timeout: 8000 })
+  axios.create({ baseURL: url, timeout: 120000 })
 );
 
 // deposit encrypted evidence + shard to a specific relay node
@@ -43,6 +44,18 @@ export async function getAuditLog(nodeIndex, vaultId) {
 // trigger manual release (consensus) through a relay node
 export async function triggerConsensus(nodeIndex, vaultId) {
   const { data } = await clients[nodeIndex].post('/trigger-release', { vaultId });
+  return data;
+}
+
+// reset a specific vault across all nodes (demo cleanup)
+export async function resetVault(vaultId) {
+  const { data } = await clients[0].post('/reset-vault', { vaultId });
+  return data;
+}
+
+// wipe ALL demo data across all nodes
+export async function resetAll() {
+  const { data } = await clients[0].post('/reset-all');
   return data;
 }
 
