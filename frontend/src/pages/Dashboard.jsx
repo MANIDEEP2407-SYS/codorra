@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ECGHeartbeat from '../components/ECGHeartbeat';
 import RelayStatus from '../components/RelayStatus';
 import CountdownTimer from '../components/CountdownTimer';
+import ThreatLevelBar from '../components/ThreatLevelBar';
 import CinematicRelease from '../components/CinematicRelease';
 import useVaultStore from '../store/useVaultStore';
 import { signHeartbeat } from '../lib/crypto';
@@ -148,6 +149,9 @@ export default function Dashboard() {
               FLATLINE — SILENCE DETECTED
             </div>
           )}
+          <div style={{ marginTop: 16 }}>
+            <ThreatLevelBar />
+          </div>
         </section>
 
         {/* relay nodes */}

@@ -149,6 +149,16 @@ app.get('/audit/:vaultId', (req, res) => {
   res.json(logs);
 });
 
+// POST /mark-released — peer notification to keep the released flag consistent
+// across all nodes after one node completes a consensus release. Idempotent.
+app.post('/mark-released', (req, res) => {
+  const { vaultId } = req.body;
+  if (!vaultId) return res.status(400).json({ error: 'Missing vaultId' });
+  const result = db.prepare('UPDATE vaults SET released=1 WHERE id=? AND released=0').run(vaultId);
+  if (result.changes > 0) logEvent(vaultId, 'RELEASED_SYNCED', `by_peer=true node=${NODE_ID}`);
+  res.json({ success: true, nodeId: NODE_ID });
+});
+
 // POST /consensus — called by peer watchdog when heartbeat stops
 // TODO: maybe add rate limiting here later
 app.post('/consensus', async (req, res) => {

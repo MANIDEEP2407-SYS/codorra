@@ -1,4 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* fonts are loaded via <link> in index.html (Syne, DM Sans, JetBrains Mono) */
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --cyan: #00f5ff;
+  --purple: #c026d3;
+  --red: #ff2d55;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --text: #e5e5e5;
+  --muted: #a3a3a3;
+  --border: rgba(255, 255, 255, 0.08);
+  --primary: #00f5ff;
+}
 
 /* global reset and theme */
 * {
@@ -8,12 +23,25 @@
 }
 
 html, body {
-  background: #0d0d0d;
-  color: #d4d4d4;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* subtle radial vignette so the hero floats out of the dark */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(0, 245, 255, 0.06), transparent 70%),
+    radial-gradient(700px 500px at 50% 110%, rgba(192, 38, 211, 0.05), transparent 70%);
 }
 
 #root {
@@ -38,12 +66,12 @@ input, textarea, select {
   color: #d4d4d4;
   font-size: 14px;
   padding: 10px 12px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   outline: none;
   width: 100%;
 }
 input:focus, textarea:focus {
-  border-color: #4a9eff;
+  border-color: var(--cyan);
 }
 select option {
   background: #1a1a1a;
@@ -78,7 +106,7 @@ body.critical-pulse {
 
 /* link styles */
 a {
-  color: #4a9eff;
+  color: var(--cyan);
   text-decoration: none;
 }
 a:hover {
@@ -87,5 +115,43 @@ a:hover {
 
 /* buttons base style */
 button {
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ---- cyberpunk motion + glow utilities ---- */
+
+/* staggered entrance for hero elements */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rise {
+  opacity: 0;
+  animation: riseIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* animated gradient sweep for the accent headline */
+@keyframes hueSweep {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.accent-gradient {
+  background: linear-gradient(90deg, #00f5ff, #5cc8ff, #c026d3, #00f5ff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hueSweep 6s linear infinite;
+}
+
+/* soft pulse on the alert badge */
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 45, 85, 0.0); }
+  50%      { box-shadow: 0 0 18px 0 rgba(255, 45, 85, 0.22); }
+}
+
+/* slow breathing glow for the primary CTA */
+@keyframes ctaGlow {
+  0%, 100% { box-shadow: 0 0 22px rgba(0, 245, 255, 0.18); }
+  50%      { box-shadow: 0 0 34px rgba(0, 245, 255, 0.34); }
 }

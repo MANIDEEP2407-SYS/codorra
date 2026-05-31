@@ -35,9 +35,9 @@ export default function GhostLayer() {
   return (
     <div ref={ref} style={{
       position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-      opacity: 0.03, fontFamily: 'monospace', fontSize: '9px',
-      color: '#888', lineHeight: '14px', whiteSpace: 'pre',
-      overflow: 'hidden', animation: 'ghostScroll 100s linear infinite',
+      opacity: 0.045, fontFamily: "'JetBrains Mono', monospace", fontSize: '9px',
+      color: 'var(--cyan)', lineHeight: '14px', whiteSpace: 'pre',
+      overflow: 'hidden', animation: 'ghostScroll 90s linear infinite',
     }} />
   );
 }

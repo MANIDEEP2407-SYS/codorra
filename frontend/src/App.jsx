@@ -1,11 +1,12 @@
 import { Routes, Route } from 'react-router-dom';
 import GhostLayer from './components/GhostLayer';
+import SpotlightGlow from './components/SpotlightGlow';
 import Landing from './pages/Landing';
 import Deposit from './pages/Deposit';
 import Dashboard from './pages/Dashboard';
 
-// main app layout - ghostlayer sits behind everything
-// and routes handle the 3 pages
+// main app layout - ghostlayer sits behind everything, spotlight glow follows
+// the mouse on top, and routes handle the 3 pages
 export default function App() {
   return (
     <>
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/deposit" element={<Deposit />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
+      <SpotlightGlow />
     </>
   );
 }

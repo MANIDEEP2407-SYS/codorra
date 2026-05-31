@@ -1,8 +1,20 @@
 const nodemailer = require('nodemailer');
 const openpgp = require('openpgp');
+const axios = require('axios');
 const { db, logEvent } = require('./db');
 const { reconstructKey } = require('./shamir');
 const { decryptEvidence, sha256hex } = require('./crypto');
+
+// After a release completes on this node, tell the peers to flip their own
+// released flag too. Without this, the node that *initiated* a release (but
+// reconstructed on a peer) would keep polling as "active" forever. Fire-and-forget.
+function broadcastReleased(vaultId) {
+  let peerUrls = [];
+  try { peerUrls = JSON.parse(process.env.PEER_URLS || '[]'); } catch { /* no peers */ }
+  peerUrls.forEach(url => {
+    axios.post(`${url}/mark-released`, { vaultId }, { timeout: 5000 }).catch(() => {});
+  });
+}
 
 // main release logic - called when consensus is reached (or manually triggered)
 async function attemptRelease(vault, incomingShard, incomingNode) {
@@ -62,6 +74,9 @@ async function attemptRelease(vault, incomingShard, incomingNode) {
   // fire off the release emails to all recipients (PGP-encrypted where possible)
   const etherealUrl = await sendReleaseEmails(vault, plaintext);
   logEvent(vault.id, 'VAULT_RELEASED', `recipients=${JSON.parse(vault.recipients).length}`);
+
+  // keep the other nodes' released flag in sync so the whole mesh agrees
+  broadcastReleased(vault.id);
 
   return { released: true, etherealUrl };
 }
